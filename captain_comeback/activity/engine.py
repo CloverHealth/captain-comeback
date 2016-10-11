@@ -46,8 +46,28 @@ class ActivityEngine(object):
                 table_data = [
                     [
                         pinfo["pid"],
+                        pinfo["ppid"], # many of troublesome processes are celery workers, which process trees up to 4 levels deep
                         pinfo["memory_info"].vms / KB,
                         pinfo["memory_info"].rss / KB,
+                       
+                        
+                        pinfo["cpu_percent"], # cpu utilization is a good secondary data point for the purpose 
+                                              # of identifying possible root causes
+                      
+                        pinfo["cpu_times"],   # cumulative cpu utilization may help determine if the process had
+                                              # a "lead-up" to failure, or rather quickly became unstable
+                      
+                        # the following info may be "overkill" - willing to consider leaving
+                        # it out, or perhaps making it available via some optional configuration
+                        pinfo["connections"], # active connections may provide information about 3rd party API Service 
+                                              # calls that may be behaving unexpectedly.  For example, we occasionally 
+                                              # encounter memory spikes when data is being queued for transfer to S3, 
+                                              # especially during times when AWS infrastructure is degraded.
+                      
+                        pinfo["open_files"],  # similarly, open files may provide useful information when our parsing 
+                                              # infrastructure fails.  Typically, we see this occur when an unusual / 
+                                              # unexpectedly large data payload needs to be processed.   We've needed to
+                                              # fix several memory leaks related to this type of scenario.
                         PROC_STATUSES_RAW.get(pinfo['status']) or "?",
                         subprocess.list2cmdline(pinfo["cmdline"])
                     ]
